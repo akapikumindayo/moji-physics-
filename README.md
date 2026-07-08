@@ -4,7 +4,7 @@
 これは日本語しか対応していません！　This only supports Japanese! (You can use other languages for the text though)
 
 プレイはこちらから
-[[https://akapikumindayo.github.io/moji-physics/](https://github.com/akapikumindayo/moji-physics.git)]
+[[[https://akapikumindayo.github.io/moji-physics/](https://github.com/akapikumindayo/moji-physics.git)]](https://akapikumindayo.github.io/moji-physics/)
 
 仕組み・クレジット:
 ・ブラウザ上で完結する安全な設計です。
