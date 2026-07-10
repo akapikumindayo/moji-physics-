@@ -424,44 +424,41 @@ const wordBody = Bodies.rectangle(x, y, hitWidth, h, { // wをhitWidthに変更
                     Body.setVelocity(body, { x: 0, y: ABYSS_FALL_SPEED });
                 }
 
-           const magnets = bodies.filter(b => b.customText && b.customText.magnet);
+          const magnets = bodies.filter(b => b.customText && b.customText.magnet);
 
 magnets.forEach((bodyB, i) => {
     for (let j = i + 1; j < magnets.length; j++) {
         const bodyA = magnets[j];
         
-        // 片方でも固定されていたら、そのボディには力を加えない（ワープ防止）
+        // 両方固定されている場合は計算しない
         if (bodyA.isStatic && bodyB.isStatic) continue;
 
         const vec = Vector.sub(bodyA.position, bodyB.position);
         const distance = Vector.magnitude(vec);
 
-        if (distance < 300 && distance > 30) {
-            const forceMagnitude = (bodyB.mass * bodyA.mass) / (distance * distance) * 5; 
+        // 300px以内、かつ重なりすぎを防ぐため 25px 以上離れている場合のみ計算
+        if (distance < 300 && distance > 25) {
+            // 距離が近づきすぎたときに力が無限大にならないよう制限をかける
+            const forceMagnitude = (bodyB.mass * bodyA.mass) / (distance * distance) * 3; 
             const force = Vector.mult(Vector.normalise(vec), forceMagnitude);
 
-            // 基本となる引き合う力（引力）の向き
-const vec = Vector.sub(bodyA.position, bodyB.position);
-const distance = Vector.magnitude(vec);
+            const isSamePole = bodyB.customText.magnet === bodyA.customText.magnet;
 
-if (distance < 300 && distance > 10) {
-    const forceMagnitude = (bodyB.mass * bodyA.mass) / (distance * distance) * 5; 
-    // bodyBからbodyAに向かう方向の力（引力）
-    const force = Vector.mult(Vector.normalise(vec), forceMagnitude);
-
-    const isSamePole = bodyB.customText.magnet === bodyA.customText.magnet;
-
-    if (!bodyB.isStatic) {
-        // 同じ極なら反発（-force）、違う極なら吸引（+force）
-        const forceToB = isSamePole ? Vector.neg(force) : force;
-        Body.applyForce(bodyB, bodyB.position, forceToB);
-    }
-    if (!bodyA.isStatic) {
-        // bodyAには作用・反作用で常にbodyBと逆向きの力をかける
-        const forceToA = isSamePole ? force : Vector.neg(force);
-        Body.applyForce(bodyA, bodyA.position, forceToA);
-    }
-}
+            // --- ここで固定（isStatic）を徹底チェック ---
+            
+            // bodyBが固定されていない場合のみ、Bに力を加える
+            if (!bodyB.isStatic) {
+                // 同じ極なら反発（-force）、違う極なら吸引（+force）
+                const forceToB = isSamePole ? Vector.neg(force) : force;
+                Body.applyForce(bodyB, bodyB.position, forceToB);
+            }
+            
+            // bodyAが固定されていない場合のみ、Aに力を加える
+            if (!bodyA.isStatic) {
+                // AにはBと真逆の方向の力をかける
+                const forceToA = isSamePole ? force : Vector.neg(force);
+                Body.applyForce(bodyA, bodyA.position, forceToA);
+            }
         }
     }
 });
