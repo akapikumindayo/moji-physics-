@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文字物理シミュレーター - アルファベット特性追加版</title>
+    <title>文字物理シミュレーター</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -97,7 +97,7 @@
 <body class="normal-mode">
 
     <div class="controls">
-        <input type="text" id="wordInput" placeholder="文字を入力..." class="px-4 py-2 rounded border border-red-200 bg-white/80 text-black focus:outline-none focus:ring-2 focus:ring-red-400 w-40">
+        <input type="text" id="wordInput" autocomplete="off" placeholder="文字を入力..." class="px-4 py-2 rounded border border-red-200 bg-white/80 text-black focus:outline-none focus:ring-2 focus:ring-red-400 w-40">
         <button id="addBtn" class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded font-bold shadow-md transition-all active:scale-95">追加</button>
         <button id="clearBtn" class="bg-stone-600 hover:bg-stone-700 text-white px-4 py-2 rounded font-bold shadow-md transition-all active:scale-95">消去</button>
         <button id="backBtn" class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded font-bold shadow-md transition-all active:scale-95">戻す</button>
