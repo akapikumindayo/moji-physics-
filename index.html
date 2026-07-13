@@ -467,7 +467,7 @@
                         const distance = Vector.magnitude(vec);
 
                         if (distance < 300 && distance > 25) {
-                            // 固定されているオブジェクトの質量は Infinity になるため、計算用に 1 として扱う
+                            // 固定(isStatic)されているオブジェクトの質量は Infinity になるため、計算用に 1 として扱う
 const massB = bodyB.isStatic ? 1 : bodyB.mass;
 const massA = bodyA.isStatic ? 1 : bodyA.mass;
 
