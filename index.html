@@ -665,83 +665,140 @@
             let val = input.value.trim().replace(/：/g, ':');
             if (!val) return;
 
-            let targetFont = 'serif'; 
-            let displayText = val;
-
-            if (displayText === "トランポリン") {
-                addTrampolineObject(displayText);
-                input.value = '';
-                return;
-            }
-
-            if (displayText === "氷床") {
-                addIceFloorObject("氷床氷床氷床氷床氷床氷床氷床");
-                input.value = '';
-                return;
-            }
-
-            if (displayText === "鎖" || displayText === "つなげる" || displayText.startsWith("つなげる:")) {
-                const textToChain = displayText.includes(":") ? displayText.split(":")[1] : "鎖鎖鎖鎖";
-                addChain(textToChain);
-                input.value = '';
-                return;
-            }
-
-            if (displayText.startsWith("連結:")) {
-                const textToConnect = displayText.split(":")[1];
-                if (textToConnect) {
-                    addConnectedObject(textToConnect, 'serif');
-                }
-                input.value = '';
-                return;
-            }
+            // 半角・全角スペースで入力を分割して配列にする
+            const items = val.split(/[\s ]+/);
             
-            if (displayText === "バウンド") {
-                isBouncing = !isBouncing;
-                document.body.classList.toggle('grayscale-mode', isBouncing);
-                engine.gravity.y = isBouncing ? 0 : 1.0;
-                if (isBouncing) {
-                    Composite.allBodies(world).forEach(body => {
-                        if (!body.isStatic) {
-                            const angle = Math.random() * Math.PI * 2;
-                            Body.setVelocity(body, { x: Math.cos(angle) * BOUNCE_SPEED, y: Math.sin(angle) * BOUNCE_SPEED });
+            // 特殊コマンドの辞書リスト
+            const specialCommands = ["トランポリン", "氷床", "鎖", "つなげる", "連結", "バウンド", "全てあなたの所為です", "深淵"];
+
+            // 生成された「塊」を記録する配列
+            let createdBodies = [];
+            // 入力全体の中に「つなげる」という命令が含まれているかのフラグ
+            let shouldLinkGroups = false;
+
+            items.forEach(item => {
+                if (!item) return;
+
+                let parts = item.split(':');
+                let font = 'serif';
+                let isChainCommand = false;
+                let isConnectCommand = false;
+                let command = '';
+                let text = '';
+
+                // --- どんなにコロンが重なっても完璧に分離する新型パース処理 ---
+                if (parts.length === 1) {
+                    // コロンがない場合（単体文字、または単体コマンド）
+                    if (specialCommands.includes(parts[0])) {
+                        command = parts[0];
+                    } else {
+                        text = parts[0];
+                    }
+                } else {
+                    // コロンがある場合、一番最後の要素を確実に「表示する文字（text）」とする
+                    text = parts[parts.length - 1];
+                    
+                    // 最後の文字以外（プレフィックス部分）を左から順番にチェック
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        let part = parts[i];
+                        if (part === "つなげる" || part === "鎖") {
+                            isChainCommand = true;
+                            shouldLinkGroups = true; // 全体を繋ぐフラグをON
+                        } else if (part === "連結") {
+                            isConnectCommand = true;
+                        } else if (specialCommands.includes(part)) {
+                            command = part; // トランポリン、氷床など
+                        } else {
+                            font = part; // コマンド以外の文字列は「フォント名」として扱う
+                        }
+                    }
+                }
+
+                // --- 解析結果をもとに物理世界へ召喚 ---
+                if (command === "バウンド" || text === "バウンド") {
+                    isBouncing = !isBouncing;
+                    document.body.classList.toggle('grayscale-mode', isBouncing);
+                    engine.gravity.y = isBouncing ? 0 : 1.0;
+                    if (isBouncing) {
+                        Composite.allBodies(world).forEach(body => {
+                            if (!body.isStatic) {
+                                const angle = Math.random() * Math.PI * 2;
+                                Body.setVelocity(body, { x: Math.cos(angle) * BOUNCE_SPEED, y: Math.sin(angle) * BOUNCE_SPEED });
+                            }
+                        });
+                    }
+                    statusLabel.innerText = isBouncing ? "バウンドモード：有効 (等速反射)" : "通常モード";
+                    playPopSound(isBouncing ? 800 : 400);
+                } 
+                else if (command === "全てあなたの所為です" || text === "全てあなたの所為です") {
+                    triggerAbyss(true); 
+                    addAbyssWords("全てあなたの所為です");
+                } 
+                else if (command === "深淵" || text === "深淵") {
+                    triggerAbyss(false);
+                } 
+                else if (command === "トランポリン" || text === "トランポリン") {
+                    addTrampolineObject("トランポリン");
+                } 
+                else if (command === "氷床" || text === "氷床") {
+                    addIceFloorObject("氷床氷床氷床氷床氷床氷床氷床");
+                } 
+                // 連結コマンドが指定されている場合
+                else if (isConnectCommand) {
+                    if (text) {
+                        let connectedBody = addConnectedObject(text, font);
+                        if (connectedBody) {
+                            createdBodies.push({ first: connectedBody, last: connectedBody });
+                        }
+                    }
+                } 
+                // 連結はなく、つなげる（鎖）コマンドだけが指定されている場合
+                else if (isChainCommand || command === "鎖" || command === "つなげる") {
+                    const textToChain = text || "鎖鎖鎖鎖";
+                    const chainResult = addChain(textToChain, font);
+                    if (chainResult) {
+                        createdBodies.push({ first: chainResult.first, last: chainResult.last });
+                    }
+                } 
+                // コマンドなし、通常のバラバラな文字落とし
+                else if (text) {
+                    if (isAbyss) {
+                        addAbyssWords(text);
+                    } else {
+                        text.split('').forEach((char, i) => {
+                            setTimeout(() => addWord(char, null, null, { font: font }), i * 100);
+                        });
+                    }
+                }
+            });
+
+            // 【塊同士の連結処理】
+            // 全体の中に「つなげる」が指定されていて、かつ2つ以上の塊が作られた場合のみ、それらを紐で結ぶ
+            if (shouldLinkGroups && createdBodies.length >= 2) {
+                for (let i = 0; i < createdBodies.length - 1; i++) {
+                    const prevGroup = createdBodies[i];
+                    const nextGroup = createdBodies[i + 1];
+
+                    // 前の塊の「お尻」と、次の塊の「頭」を鎖で繋ぐ
+                    const constraint = Matter.Constraint.create({
+                        bodyA: prevGroup.last,
+                        bodyB: nextGroup.first,
+                        pointA: { x: 0, y: 20 },
+                        pointB: { x: 0, y: -20 },
+                        stiffness: 0.3,
+                        length: 40, // 塊同士の間隔の長さ
+                        render: {
+                            visible: true,
+                            strokeStyle: isAbyss ? '#ffffff' : '#8d6e63',
+                            lineWidth: 3
                         }
                     });
+                    Composite.add(world, constraint);
                 }
-                statusLabel.innerText = isBouncing ? "バウンドモード：有効 (等速反射)" : "通常モード";
-                input.value = '';
-                playPopSound(isBouncing ? 800 : 400);
-                return;
-            }
-            if (displayText === "全てあなたの所為です") { 
-                triggerAbyss(true); 
-                addAbyssWords("全てあなたの所為です");
-                input.value = ''; 
-                return; 
-            }
-            if (displayText === "深淵") {
-                triggerAbyss(false);
-                input.value = '';
-                return;
             }
 
-            if (val.includes(':')) {
-                const parts = val.split(':');
-                targetFont = parts[0];
-                displayText = parts[1];
-                if (!displayText) return;
-            }
-            
-            if (val) {
-                if (isAbyss) {
-                    addAbyssWords(displayText);
-                } else {
-                    displayText.split('').forEach((char, i) => {
-                        setTimeout(() => addWord(char, null, null, { font: targetFont }), i * 100);
-                    });
-                }
-                input.value = '';
-            }
+            // 入力欄をクリア
+            input.value = '';
         }
 
         addBtn.onclick = handleAdd;
@@ -851,17 +908,22 @@
             playPopSound(400, 'square', 0.1);
         }
 
-        function addChain(text) {
+        // 引数に font = 'serif' を追加します
+        function addChain(text, font = 'serif') {
             const chars = text.split('');
             const fontSize = 50;
             const startX = Math.random() * (width - 200) + 100;
             const startY = 100; 
             
             let lastBody = null;
+            let firstBody = null;
 
             chars.forEach((char, i) => {
                 const currentY = startY + (i * (fontSize + 10));
-                const body = addWord(char, startX, currentY, { fontSize: fontSize }); 
+                // フォント設定をaddWordへ渡す
+                const body = addWord(char, startX, currentY, { fontSize: fontSize, font: font }); 
+
+                if (i === 0) firstBody = body;
 
                 if (lastBody && body) {
                     const constraint = Matter.Constraint.create({
@@ -882,6 +944,9 @@
                 lastBody = body;
             });
             playPopSound(600, 'sine', 0.1);
+
+            // 先頭の文字と末尾の文字をオブジェクトで返す
+            return { first: firstBody, last: lastBody };
         }
 
         function addIceFloorObject(text) {
@@ -934,6 +999,9 @@
 
             Composite.add(world, connectedBody);
             playPopSound(500, 'sine', 0.1);
+
+            // ▼ここを追加！ 生成したオブジェクトを返します
+            return connectedBody;
         }
 
         vkToggleBtn.addEventListener('click', () => {
